@@ -33,10 +33,22 @@ or
 telnet localhost 8888
 ```
 
-## How to run the sensor bouy programs
+## How to run the sensor bouy program
 A bouy program is written in-order to generate sensor data and enables
 automatic submission.
 ```bash
 python bouy.py
 ```
+
+## TODO
+- [x] Server program basic structure
+- [x] Server program error handling
+- [x] Client program basic structure
+- [x] Client program error handling
+- [x] Server program DB connectivity
+- [x] Client program automatic dataset generation
+- [ ] Processing of sensor bouy data in server
+- [ ] Comparing the sensor given data with the previous sets of data in DB
+- [ ] Reaching a conclusion of error type
+- [ ] Seding alert message
 
