@@ -20,22 +20,6 @@ MAX_CLIENT_CON = 10     # The max no of clients which could connect to the serve
 HOST = ''               # Symbolic name meaning the local host
 PORT = 8888             # Arbitrary non-privileged port
 
-def find_bouy(bouy_id, password):
-    """
-    Identifies the bouy from the known list
-    """
-    # Password list for the time being 
-    pass_list = [   'C58C9DUE9qmautEkbXCZewFe', 
-                    'v8GfjwcPxjGy9saMDZkjd67p',
-                    'A4SWMQUTjpJ653a3s8ktjR6h', 
-                    'b3fMBs4qMQNuauGeN5uwgKR6'
-                ]
-
-    if pass_list[bouy_id-1] == password:
-        return "success"
-    else:
-        return "failed"
-
 def handle_recv_error(e):    
     err = e.args[0]
     if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
@@ -63,6 +47,7 @@ def close_client(client, addr):
     Closes client in a safe way
     """
     client.shutdown(socket.SHUT_RDWR)
+    client.close()
     print '[+] ' + str(addr[0]) + ':' + str(addr[1]) + ' disconnected!'
 
 def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
@@ -88,39 +73,32 @@ def client_thread(client, addr):
         bouy_id = int(client.recv(4))
 
         # If client enters an invalid bouy_id range
-        if not bouy_id > 0 and bouy_id < 5: 
+        if not (bouy_id > 0 and bouy_id < 5): 
             client.send('Invalid id')
-            raise Exception(errno.EPIPE)
-     
-        client.send('Enter password: ')
-        password = client.recv(26).strip()
+            raise ValueError("Invalid id")
 
-        # If the password doesn't match
-        if find_bouy(bouy_id, password) == "failed":
-            client.send('Invalid password')
-            raise Exception(errno.EPIPE)
-
-
-        reply = 'Login successful\nWelcome Bouy - ' + str(bouy_id) + \
+        reply = 'Welcome Bouy - ' + str(bouy_id) + \
                 '.\nEnter the measured pressure (in kPa): '
         client.send(reply)
 
-        result = client.recv(4)
-        pressure = int(result)
+        pressure = int(client.recv(4))
 
         reply = 'Enter the Ritcher (in R): '
         client.send(reply)
         ritcher = float(client.recv(4))
 
+    except ValueError:
+        print 'Invalid value'
+        close_client(client, addr)
+        return False
+
     except IOError, e:
         if e.errno == errno.EPIPE:
             print 'Connection closed by client'
-            close_client(client, addr)
-            return False
         else:
-            print 'Other errors'            
-            close_client(client, addr)
-            return False
+            print 'Other errors'
+        close_client(client, addr)
+        return False
     
     try :
         db = sqlite3.connect("server.db")
