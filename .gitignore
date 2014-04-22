@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+G# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 
@@ -51,4 +51,24 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+
+# Databases
+server.db
+
+# Created by http://www.gitignore.io
+
+### Linux ###
+*~
+
+# KDE directory preferences
+.directory
+
+
+### vim ###
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+*.un~
+Session.vim
+.netrwhist
+*~
 
