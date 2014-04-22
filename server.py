@@ -20,18 +20,6 @@ MAX_CLIENT_CON = 10     # The max no of clients which could connect to the serve
 HOST = ''               # Symbolic name meaning the local host
 PORT = 8888             # Arbitrary non-privileged port
 
-def handle_recv_error(e):    
-    err = e.args[0]
-    if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-        sleep(1)
-        print 'No data available'
-
-    elif err == ENOTCONN:
-        print 'Client disconnected'
-    else:
-        print e
-        sys.exit(1)
-
 def get_alert_type(pressure, ritcher):
     """
     Returns the alert type of given data
