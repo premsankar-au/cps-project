@@ -32,7 +32,28 @@ def handle_recv_error(e):
         print e
         sys.exit(1)
 
-def process_data(pressure, ritcher):
+def get_alert_type(pressure, ritcher):
+    """
+    Returns the alert type of given data
+    """
+    if (pressure > 95 and pressure < 104.99) and  \
+        (ritcher > 0 and ritcher < 2.99):
+        return 'regular'
+
+    elif (pressure > 105 and pressure < 114.99) and  \
+        (ritcher > 3 and ritcher < 3.99):
+        return 'low alert'
+
+    elif (pressure > 115 and pressure < 129.99) and  \
+        (ritcher > 4 and ritcher < 5.99):
+        return 'medium alert'
+
+    elif (pressure > 130 and pressure < 170) and  \
+        (ritcher > 5 and ritcher < 20):
+        return 'high alert'
+
+
+def process_data(bouyid, pressure, ritcher):
     """
     A function to process the bouy input
     """
@@ -70,22 +91,23 @@ def client_thread(client, addr):
     client.send('Welcome to TWS server\nEnter Bouy id: ')
 
     try:
+        # Recieves bouy id
         bouy_id = int(client.recv(4))
-
         # If client enters an invalid bouy_id range
         if not (bouy_id > 0 and bouy_id < 5): 
             client.send('Invalid id')
             raise ValueError("Invalid id")
 
+        # Recieves pressure
         reply = 'Welcome Bouy - ' + str(bouy_id) + \
                 '.\nEnter the measured pressure (in kPa): '
         client.send(reply)
-
-        pressure = int(client.recv(4))
-
+        pressure = float(client.recv(10))
+        
+        # Recieves Ritcher scale value
         reply = 'Enter the Ritcher (in R): '
         client.send(reply)
-        ritcher = float(client.recv(4))
+        ritcher = float(client.recv(10))
 
     except ValueError:
         print 'Invalid value'
@@ -93,23 +115,55 @@ def client_thread(client, addr):
         return False
 
     except IOError, e:
+        # If client disconnects 
         if e.errno == errno.EPIPE:
             print 'Connection closed by client'
         else:
             print 'Other errors'
         close_client(client, addr)
         return False
+
+
     
     try :
         db = sqlite3.connect("server.db")
+        c = db.cursor()
+
+        # Generating a time to be stored along with bouy details
+        time = datetime.now()
+        alert = get_alert_type(pressure, ritcher) 
+        print 'Received ' + str(alert) + ' from bouy: ' + str(bouy_id)
+
+        # Insert a row of data
+        db.execute('INSERT into server_data values (NULL, ?, ?, ?, ?, ?)', (bouy_id, time, \
+            pressure, ritcher, alert))
+
+        # Save (commit) the changes
+        db.commit()
+        # We can also close the connection if we are done with it.
+        # Just be sure any changes have been committed or they will be lost.
+        db.close()
+        
+    except sqlite3.DatabaseError, e:
+        print 'SQLite error: ' + str(e)
+        close_client(client, addr)
+        sys.exit(1)
+
     except IOError, e:
         print 'Error in connecting to db'
         close_client(client, addr)
         sys.exit(1)
 
-    time = datetime.now()
-    db.execute('INSERT into server_data values (NULL, ?, ?, ?, ?)', (bouy_id, time, \
-        pressure, ritcher))
+    try:
+        client.send("Data successully received by server\n")
+    except IOError, e:
+        # If client disconnects 
+        if e.errno == errno.EPIPE:
+            print 'Connection closed by client'
+        else:
+            print 'Other errors'
+        close_client(client, addr)
+        return False
 
     return True
  
